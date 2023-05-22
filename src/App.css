@@ -1,4 +1,26 @@
-body {
-  background-color: #030b15;
+.presale-wrapper button.active {
+  border-color: aqua;
+}
+
+.presale-wrapper .token-logo {
+  width: 30px;
+  margin-right: 5px;
+}
+
+.presale-wrapper .amount-box {
+  background-color: #203654;
+  width: 100%;
+}
+
+.presale-wrapper .amount-box input {
   color: white;
+  padding: 15px 10px;
+}
+
+.presale-wrapper .amount-box img {
+  width: 28px;
+}
+
+.presale-wrapper input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
 }

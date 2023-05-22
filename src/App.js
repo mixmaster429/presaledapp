@@ -1,19 +1,82 @@
+import { useState, useEffect } from 'react'
 import {
   Grid,
   Box,
   Container,
   Typography,
   Button,
-  InputBase,
+  TextField,
 } from '@mui/material'
-import ETHLOGO from './assets/images/eth.svg'
-import USDTLOGO from './assets/images/usdt.svg'
-import BNBLOGO from './assets/images/bnb.svg'
+import { LoadingButton } from '@mui/lab'
+import {
+  useConnect,
+  useAccount,
+  useNetwork,
+  useSwitchNetwork,
+  useBalance,
+} from 'wagmi'
+import { appConfig } from './config'
 import './App.css'
 
 function App() {
+  const [correctNetwork, setCorrectNetwork] = useState(false)
+  const [sellBalance, setSellBalance] = useState('')
+  const [buyBalance, setBuyBalance] = useState('')
+  const [selectedToken, setSelectedToken] = useState(appConfig?.sellTokens[0])
+  const [insufficientBalance, setInsufficientBalance] = useState(false)
+
+  const { isConnected, address } = useAccount()
+  const useConnectObjects = useConnect()
+  const { connect, connectors } = useConnectObjects
+  const connecting = useConnectObjects.isLoading
+  const { chain } = useNetwork()
+  const { chains, isLoading, switchNetwork } = useSwitchNetwork()
+
+  const { data } = useBalance({
+    address,
+    token: selectedToken.tokenAddress,
+  })
+
+  const handleAmountChange = (value) => {
+    if (Number(value) + selectedToken.fee >= data?.formatted)
+      setInsufficientBalance(true)
+    else setInsufficientBalance(false)
+    if (Number(value) > 0) {
+      setSellBalance(Number(value))
+      setBuyBalance(Number(value) * selectedToken?.rate)
+    }
+    if (value === '0') {
+      setSellBalance(0)
+      setBuyBalance('')
+    }
+    if (value === '') {
+      setSellBalance('')
+      setBuyBalance('')
+    }
+  }
+
+  const changeSymbol = (token) => {
+    switchNetwork?.(token?.chainId)
+    setSelectedToken(token)
+  }
+
+  useEffect(() => {
+    setSellBalance('')
+    setBuyBalance('')
+    setInsufficientBalance(false)
+    const isCorrectNet = chains.some((element) => element.id === chain?.id)
+    console.log(isCorrectNet)
+    setCorrectNetwork(isCorrectNet)
+    if (isCorrectNet) {
+      const token = appConfig.sellTokens.filter((token) => {
+        return token.chainId === chain?.id
+      })
+      setSelectedToken(token[0])
+    }
+  }, [chain, chains])
+
   return (
-    <div className='App'>
+    <div className='presale-wrapper'>
       <Container>
         <Grid container justifyContent='center' marginTop={10}>
           <Grid item xs={12} sm={8} md={6} lg={6}>
@@ -24,69 +87,129 @@ function App() {
                 borderRadius: 3,
               }}
             >
-              <Grid container>
-                <Grid item sm={3}>
-                  <Button variant='outlined'>
-                    <img src={ETHLOGO} alt='' srcSet='' />
-                    <Grid>
-                      <Typography>ETH</Typography>
+              <Grid container spacing={1}>
+                {appConfig?.sellTokens.map((token, index) => {
+                  return (
+                    <Grid item xs={6} sm={3} key={index}>
+                      <Button
+                        variant='outlined'
+                        fullWidth
+                        className={
+                          chain?.id === token?.chainId &&
+                          selectedToken.symbol === token?.symbol
+                            ? 'active'
+                            : ''
+                        }
+                        onClick={() => changeSymbol?.(token)}
+                      >
+                        <img
+                          src={token.icon}
+                          alt=''
+                          srcSet=''
+                          className='token-logo'
+                        />
+                        <Grid>
+                          <Typography fontSize={14} lineHeight={1}>
+                            {token.symbol}
+                          </Typography>
+                          {token.type && (
+                            <Typography fontSize={10}>{token.type}</Typography>
+                          )}
+                        </Grid>
+                      </Button>
                     </Grid>
-                  </Button>
-                </Grid>
-                <Grid item sm={3}>
-                  <Button variant='outlined'>
-                    <img src={USDTLOGO} alt='' srcSet='' />
-                    <Grid>
-                      <Typography>USDT</Typography>
-                      <Typography>ERC20</Typography>
-                    </Grid>
-                  </Button>
-                </Grid>
-                <Grid item sm={3}>
-                  <Button variant='outlined'>
-                    <img src={BNBLOGO} alt='' srcSet='' />
-                    <Grid>
-                      <Typography>BNB</Typography>
-                    </Grid>
-                  </Button>
-                </Grid>
-                <Grid item sm={3}>
-                  <Button variant='outlined'>
-                    <img src={USDTLOGO} alt='' srcSet='' />
-                    <Grid>
-                      <Typography>USDT</Typography>
-                      <Typography>BEP20</Typography>
-                    </Grid>
-                  </Button>
-                </Grid>
+                  )
+                })}
               </Grid>
 
-              <Grid>
-                <Typography>ETH balance: 0</Typography>
-              </Grid>
-
-              <Grid container>
-                <Grid sm={6}>
-                  <Typography>Amount in ETH you pay</Typography>
-                  <InputBase></InputBase>
-                </Grid>
-                <Grid sm={6}>
-                  <Typography>Amount in AICX you receive</Typography>
-                  <InputBase></InputBase>
-                </Grid>
-              </Grid>
-
-              <Grid>
-                <Typography>
-                  0.015 ETH is reserved for gas. The actual amount used will
-                  depend on the network.
+              <Grid marginTop={2}>
+                <Typography textAlign={'center'}>
+                  Balance:{' '}
+                  {correctNetwork ? (
+                    <>
+                      {data?.formatted} {data?.symbol}
+                    </>
+                  ) : (
+                    <>0</>
+                  )}
                 </Typography>
               </Grid>
 
-              <Grid>
-                <Button variant='contained' fullWidth>
-                  Buy
-                </Button>
+              <Grid container marginTop={1} spacing={1}>
+                <Grid xs={12} sm={6} item>
+                  <Typography>Amount in {data?.symbol} you pay:</Typography>
+                  <TextField
+                    InputProps={{
+                      endAdornment: <img src={selectedToken?.icon} alt='' />,
+                    }}
+                    type='number'
+                    error={insufficientBalance}
+                    className='amount-box'
+                    sx={{
+                      '&.Mui-error': {
+                        border: 1,
+                        borderColor: '#ff7474',
+                      },
+                    }}
+                    placeholder='0.0000'
+                    value={sellBalance}
+                    disabled={!correctNetwork}
+                    onChange={(e) => handleAmountChange(e.target.value)}
+                  ></TextField>
+                </Grid>
+                <Grid xs={12} sm={6} item>
+                  <Typography>Amount in AICX you receive:</Typography>
+                  <TextField
+                    // InputProps={{
+                    //   endAdornment: <img src={selectedToken?.icon} alt='' />,
+                    // }}
+                    value={buyBalance > 0 ? Number(buyBalance).toFixed(4) : ''}
+                    className='amount-box'
+                  ></TextField>
+                </Grid>
+              </Grid>
+
+              <Grid marginTop={2}>
+                <Typography textAlign={'center'} fontSize={14}>
+                  0.015 {selectedToken?.coin} is reserved for gas. The actual
+                  amount used will depend on the network.
+                </Typography>
+              </Grid>
+
+              <Grid marginTop={2}>
+                {isConnected ? (
+                  <>
+                    {correctNetwork ? (
+                      <Button
+                        variant='contained'
+                        fullWidth
+                        disabled={
+                          insufficientBalance || Number(data?.formatted) === 0
+                        }
+                      >
+                        Buy
+                      </Button>
+                    ) : (
+                      <LoadingButton
+                        variant='contained'
+                        loading={isLoading}
+                        fullWidth
+                        onClick={() => switchNetwork?.(chains[0].id)}
+                      >
+                        Change network
+                      </LoadingButton>
+                    )}
+                  </>
+                ) : (
+                  <LoadingButton
+                    variant='contained'
+                    loading={connecting}
+                    fullWidth
+                    onClick={() => connect({ connector: connectors[0] })}
+                  >
+                    Connect Wallet
+                  </LoadingButton>
+                )}
               </Grid>
             </Box>
           </Grid>

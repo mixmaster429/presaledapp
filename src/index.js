@@ -1,30 +1,34 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import './index.css'
-import App from './App'
-import reportWebVitals from './reportWebVitals'
-
-import '@rainbow-me/rainbowkit/styles.css'
 import {
-  getDefaultWallets,
   RainbowKitProvider,
   darkTheme,
+  connectorsForWallets,
 } from '@rainbow-me/rainbowkit'
 import { configureChains, createConfig, WagmiConfig } from 'wagmi'
-import { sepolia } from 'wagmi/chains'
-import { alchemyProvider } from 'wagmi/providers/alchemy'
+import { metaMaskWallet } from '@rainbow-me/rainbowkit/wallets'
+import { sepolia, mainnet, bsc } from 'wagmi/chains'
 import { publicProvider } from 'wagmi/providers/public'
+import App from './App'
+import reportWebVitals from './reportWebVitals'
+import '@rainbow-me/rainbowkit/styles.css'
+import './index.css'
 
 const { chains, publicClient } = configureChains(
-  [sepolia],
-  [alchemyProvider({ apiKey: process.env.ALCHEMY_ID }), publicProvider()]
+  [mainnet, bsc, sepolia],
+  [publicProvider()]
 )
 
-const { connectors } = getDefaultWallets({
-  appName: 'My RainbowKit App',
-  projectId: 'YOUR_PROJECT_ID',
-  chains,
-})
+// const { connectors } = getDefaultWallets({
+//   chains,
+// })
+
+const connectors = connectorsForWallets([
+  {
+    groupName: 'Recommended',
+    wallets: [metaMaskWallet({ chains })],
+  },
+])
 
 const wagmiConfig = createConfig({
   autoConnect: true,
@@ -43,7 +47,4 @@ root.render(
   </React.StrictMode>
 )
 
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
 reportWebVitals()
