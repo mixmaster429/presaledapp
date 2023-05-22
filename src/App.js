@@ -19,7 +19,6 @@ import { appConfig } from './config'
 import './App.css'
 
 function App() {
-  const [correctNetwork, setCorrectNetwork] = useState(false)
   const [sellBalance, setSellBalance] = useState('')
   const [buyBalance, setBuyBalance] = useState('')
   const [selectedToken, setSelectedToken] = useState(appConfig?.sellTokens[0])
@@ -32,9 +31,12 @@ function App() {
   const { chain } = useNetwork()
   const { chains, isLoading, switchNetwork } = useSwitchNetwork()
 
+  const correctNetwork = chains.some((element) => element.id === chain?.id)
+
   const { data } = useBalance({
     address,
-    token: selectedToken.tokenAddress,
+    token:
+      selectedToken.chainId === chain?.id ? selectedToken.tokenAddress : null,
   })
 
   const handleAmountChange = (value) => {
@@ -64,16 +66,16 @@ function App() {
     setSellBalance('')
     setBuyBalance('')
     setInsufficientBalance(false)
-    const isCorrectNet = chains.some((element) => element.id === chain?.id)
-    console.log(isCorrectNet)
-    setCorrectNetwork(isCorrectNet)
-    if (isCorrectNet) {
+  }, [chain, chains])
+
+  useEffect(() => {
+    if (correctNetwork) {
       const token = appConfig.sellTokens.filter((token) => {
         return token.chainId === chain?.id
       })
       setSelectedToken(token[0])
     }
-  }, [chain, chains])
+  }, [])
 
   return (
     <div className='presale-wrapper'>
