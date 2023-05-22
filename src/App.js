@@ -62,6 +62,10 @@ function App() {
     setSelectedToken(token)
   }
 
+  const buy = () => {
+    // const provider = new ethers
+  }
+
   useEffect(() => {
     setSellBalance('')
     setBuyBalance('')
